@@ -36,6 +36,7 @@ namespace healthchecks
 
             // Registers required services for health checks
             services.AddHealthChecks()
+                .AddCheck("self", () => HealthCheckResult.Healthy(), new[] { "healthy" })
                 .AddDbContextCheck<ApplicationDbContext>("Application", null, new [] { "healthy" });
 
             services
@@ -67,7 +68,7 @@ namespace healthchecks
                 });
                 endpoints.MapHealthChecks("/lively", new HealthCheckOptions()
                 {
-                    Predicate = _ => false,
+                    Predicate = x => x.Name.Equals("self"),
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
             });
