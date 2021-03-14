@@ -2,18 +2,11 @@ using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace healthchecks
 {
@@ -36,8 +29,8 @@ namespace healthchecks
 
             // Registers required services for health checks
             services.AddHealthChecks()
-                .AddCheck("self", () => HealthCheckResult.Healthy(), new[] { "healthy" })
-                .AddDbContextCheck<ApplicationDbContext>("Application", null, new [] { "healthy" });
+                .AddCheck("self", () => HealthCheckResult.Healthy(), new[] { "services" })
+                .AddDbContextCheck<ApplicationDbContext>("db context", null, new [] { "services" });
 
             services
               .AddHealthChecksUI()
@@ -59,13 +52,20 @@ namespace healthchecks
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHealthChecksUI(config => config.UIPath = "/healthcheck");
+                // an endpoint for the health check UI
+                endpoints.MapHealthChecksUI(config => 
+                { 
+                    config.UIPath = "/healthcheck"; 
+                });
 
-                endpoints.MapHealthChecks("/healthy", new HealthCheckOptions()
+                // Kubernetes fro example has probes for livelyness and readiness so
+                // configure an endpoint for all the services that have checks as ready
+                endpoints.MapHealthChecks("/ready", new HealthCheckOptions()
                 {
-                    Predicate = x => x.Tags.Contains("healthy"),
+                    Predicate = x => x.Tags.Contains("services"),
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
+                //configure a simple "self" endpoint for the livelyness probe
                 endpoints.MapHealthChecks("/lively", new HealthCheckOptions()
                 {
                     Predicate = x => x.Name.Equals("self"),
